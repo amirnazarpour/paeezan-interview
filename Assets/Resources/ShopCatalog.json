@@ -1,0 +1,132 @@
+{
+    "sections": [
+        {
+            "id": "powerups",
+            "title": "POWERUPS",
+            "items": [
+                {
+                    "id": "shield",
+                    "title": "One-Hit Shield",
+                    "description": "Block one obstacle hit",
+                    "kind": 1,
+                    "price": 2,
+                    "color": "",
+                    "duration": 0.0,
+                    "shieldHits": 1,
+                    "scoreMultiplier": 0
+                },
+                {
+                    "id": "double_score",
+                    "title": "Double Score",
+                    "description": "Double star score for 10 seconds",
+                    "kind": 2,
+                    "price": 2,
+                    "color": "",
+                    "duration": 10.0,
+                    "shieldHits": 0,
+                    "scoreMultiplier": 2
+                }
+            ]
+        },
+        {
+            "id": "ball_themes",
+            "title": "BALL THEMES",
+            "items": [
+                {
+                    "id": "ball_default",
+                    "title": "Ocean",
+                    "description": "Classic ball color",
+                    "kind": 3,
+                    "price": 0,
+                    "color": "#397FA0",
+                    "duration": 0.0,
+                    "shieldHits": 0,
+                    "scoreMultiplier": 0
+                },
+                {
+                    "id": "ball_coral",
+                    "title": "Coral",
+                    "description": "Warm coral",
+                    "kind": 3,
+                    "price": 15,
+                    "color": "#F47A78",
+                    "duration": 0.0,
+                    "shieldHits": 0,
+                    "scoreMultiplier": 0
+                },
+                {
+                    "id": "ball_gold",
+                    "title": "Gold",
+                    "description": "Bright gold",
+                    "kind": 3,
+                    "price": 25,
+                    "color": "#F5C542",
+                    "duration": 0.0,
+                    "shieldHits": 0,
+                    "scoreMultiplier": 0
+                },
+                {
+                    "id": "ball_violet",
+                    "title": "Violet",
+                    "description": "Soft violet",
+                    "kind": 3,
+                    "price": 35,
+                    "color": "#9B7BFF",
+                    "duration": 0.0,
+                    "shieldHits": 0,
+                    "scoreMultiplier": 0
+                }
+            ]
+        },
+        {
+            "id": "world_themes",
+            "title": "RING THEMES",
+            "items": [
+                {
+                    "id": "world_default",
+                    "title": "Classic",
+                    "description": "Classic dark ring",
+                    "kind": 4,
+                    "price": 0,
+                    "color": "#000000",
+                    "duration": 0.0,
+                    "shieldHits": 0,
+                    "scoreMultiplier": 0
+                },
+                {
+                    "id": "world_navy",
+                    "title": "Navy",
+                    "description": "Deep blue ring",
+                    "kind": 4,
+                    "price": 15,
+                    "color": "#27476E",
+                    "duration": 0.0,
+                    "shieldHits": 0,
+                    "scoreMultiplier": 0
+                },
+                {
+                    "id": "world_forest",
+                    "title": "Forest",
+                    "description": "Green ring",
+                    "kind": 4,
+                    "price": 25,
+                    "color": "#267A65",
+                    "duration": 0.0,
+                    "shieldHits": 0,
+                    "scoreMultiplier": 0
+                },
+                {
+                    "id": "world_plum",
+                    "title": "Plum",
+                    "description": "Purple ring",
+                    "kind": 4,
+                    "price": 35,
+                    "color": "#754487",
+                    "duration": 0.0,
+                    "shieldHits": 0,
+                    "scoreMultiplier": 0
+                }
+            ]
+        }
+    ]
+}

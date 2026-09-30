@@ -37,6 +37,24 @@ namespace ScriptableObjects.Services
             CoinsChanged?.Invoke(updated);
         }
 
+        public bool TrySpendCoins(int amount)
+        {
+            if (amount < 0 || !HasSaveService())
+                return false;
+
+            int current = Mathf.Max(0, saveService.LoadInt(BalanceKey));
+            if (current < amount)
+                return false;
+
+            if (amount == 0)
+                return true;
+
+            int updated = current - amount;
+            saveService.SaveInt(BalanceKey, updated);
+            CoinsChanged?.Invoke(updated);
+            return true;
+        }
+
         private bool HasSaveService()
         {
             if (!saveService && !_reportedMissingSaveService)

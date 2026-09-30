@@ -3,6 +3,9 @@ using Enums;
 using UnityEngine;
 using ScriptableObjects.GameEvents;
 using ScriptableObjects.Services;
+using Shop;
+using System;
+using UnityEngine.EventSystems;
 
 namespace GameCore
 {
@@ -37,6 +40,17 @@ namespace GameCore
         private float radius;
         private bool isInside;
         private bool canMove; 
+        private int shieldHitsRemaining;
+        private float doubleScoreRemaining;
+        private int activeScoreMultiplier = 1;
+
+        public event Action PowerupStateChanged;
+        public bool IsRunActive => canMove && gameObject.activeInHierarchy;
+        public bool ShieldActive => shieldHitsRemaining > 0;
+        public int ShieldHitsRemaining => shieldHitsRemaining;
+        public bool DoubleScoreActive => doubleScoreRemaining > 0f;
+        public float DoubleScoreRemaining => doubleScoreRemaining;
+        public int ScoreMultiplier => DoubleScoreActive ? activeScoreMultiplier : 1;
 
         private SpriteRenderer _spriteRenderer;
         private Vector3 _firstLocalScale;
@@ -70,13 +84,48 @@ namespace GameCore
         private void StartMovement()
         {
             lapProgress = 0f;
+            shieldHitsRemaining = 0;
+            doubleScoreRemaining = 0f;
+            activeScoreMultiplier = 1;
             canMove = true;
+            PowerupStateChanged?.Invoke();
+        }
+
+        public bool TryActivateShield()
+        {
+            ShopItemData item = ShopCatalog.FindPowerup(ShopItemKind.Shield);
+            if (!IsRunActive || ShieldActive || item == null || item.shieldHits <= 0 ||
+                !ShopStateService.TryConsume(item.id))
+                return false;
+            shieldHitsRemaining = item.shieldHits;
+            PowerupStateChanged?.Invoke();
+            return true;
+        }
+
+        public bool TryActivateDoubleScore()
+        {
+            ShopItemData item = ShopCatalog.FindPowerup(ShopItemKind.DoubleScore);
+            if (!IsRunActive || DoubleScoreActive || item == null || item.duration <= 0f ||
+                item.scoreMultiplier <= 0 ||
+                !ShopStateService.TryConsume(item.id))
+                return false;
+            doubleScoreRemaining = item.duration;
+            activeScoreMultiplier = item.scoreMultiplier;
+            PowerupStateChanged?.Invoke();
+            return true;
         }
 
         private void Update()
         {
             if (!canMove)
                 return;
+
+            if (doubleScoreRemaining > 0f)
+            {
+                doubleScoreRemaining = Mathf.Max(0f, doubleScoreRemaining - Time.deltaTime);
+                if (doubleScoreRemaining == 0f)
+                    PowerupStateChanged?.Invoke();
+            }
 
             if (speed < maxSpeed)
                 speed = Mathf.Min(speed + speedIncreaseRate * Time.deltaTime, maxSpeed);
@@ -94,7 +143,7 @@ namespace GameCore
                     coinWallet.AddCoins(completedLaps);
             }
 
-            if (Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonDown(0) && !IsPointerOverUi())
             {
                 AudioManger.AudioManager.Instance.PlaySFX(SoundType.Move);
                 isInside = !isInside;
@@ -107,16 +156,33 @@ namespace GameCore
             transform.position = center.position + new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0) * radius;
         }
 
+        private static bool IsPointerOverUi()
+        {
+            if (!EventSystem.current)
+                return false;
+            if (Input.touchCount > 0)
+                return EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
+            return EventSystem.current.IsPointerOverGameObject();
+        }
+
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (!canMove)
                 return;
 
             if (other.CompareTag("Obsticle"))
-                OnGameEnded.Raise();
+            {
+                if (ShieldActive)
+                {
+                    shieldHitsRemaining--;
+                    PowerupStateChanged?.Invoke();
+                }
+                else
+                    OnGameEnded.Raise();
+            }
             else
             {
-                _score += increasedScoreByPickingStars;
+                _score += increasedScoreByPickingStars * ScoreMultiplier;
                 OnScoreChanged.Raise(_score);
                 AudioManger.AudioManager.Instance.PlaySFX(SoundType.Score);
             }
@@ -125,6 +191,10 @@ namespace GameCore
         private void Die()
         {
             canMove = false;
+            shieldHitsRemaining = 0;
+            doubleScoreRemaining = 0f;
+            activeScoreMultiplier = 1;
+            PowerupStateChanged?.Invoke();
             AudioManger.AudioManager.Instance.PlaySFX(SoundType.Explosion);
             speed = 0;
 
