@@ -27,3 +27,5 @@ Use short, imperative commit subjects such as `Fix score reset on restart`. Pull
 ## Unity Workflow
 
 Check `unity status` before Editor work. Use the connected Unity Editor through Unity Pipeline and Unity CLI for scene, prefab, asset, and Editor changes; diagnose connection failures before changing methods. Make gameplay components usable when placed in a scene: provide sensible defaults and a prefab for features spanning objects. If setup is unavoidable, emit one clear error naming the missing requirement and keep runtime behavior safe.
+
+For shop and uGUI conventions, including Inspector references and avoiding runtime scene searches, see [Shop and UI development guidelines](docs/ShopAndUIGuidelines.md).
