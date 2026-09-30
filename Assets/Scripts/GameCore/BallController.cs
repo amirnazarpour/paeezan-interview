@@ -45,6 +45,8 @@ namespace GameCore
         private int activeScoreMultiplier = 1;
 
         public event Action PowerupStateChanged;
+        public event Action<int> CoinsEarned;
+        public event Action<PowerupFeedbackType> PowerupFeedback;
         public bool IsRunActive => canMove && gameObject.activeInHierarchy;
         public bool ShieldActive => shieldHitsRemaining > 0;
         public int ShieldHitsRemaining => shieldHitsRemaining;
@@ -99,6 +101,7 @@ namespace GameCore
                 return false;
             shieldHitsRemaining = item.shieldHits;
             PowerupStateChanged?.Invoke();
+            PowerupFeedback?.Invoke(PowerupFeedbackType.ShieldActivated);
             return true;
         }
 
@@ -112,6 +115,7 @@ namespace GameCore
             doubleScoreRemaining = item.duration;
             activeScoreMultiplier = item.scoreMultiplier;
             PowerupStateChanged?.Invoke();
+            PowerupFeedback?.Invoke(PowerupFeedbackType.DoubleScoreActivated);
             return true;
         }
 
@@ -124,7 +128,10 @@ namespace GameCore
             {
                 doubleScoreRemaining = Mathf.Max(0f, doubleScoreRemaining - Time.deltaTime);
                 if (doubleScoreRemaining == 0f)
+                {
                     PowerupStateChanged?.Invoke();
+                    PowerupFeedback?.Invoke(PowerupFeedbackType.DoubleScoreExpired);
+                }
             }
 
             if (speed < maxSpeed)
@@ -140,7 +147,13 @@ namespace GameCore
                 lapProgress -= completedLaps * 360f;
 
                 if (coinWallet)
+                {
+                    int previousBalance = coinWallet.Balance;
                     coinWallet.AddCoins(completedLaps);
+                    int earned = coinWallet.Balance - previousBalance;
+                    if (earned > 0)
+                        CoinsEarned?.Invoke(earned);
+                }
             }
 
             if (Input.GetMouseButtonDown(0) && !IsPointerOverUi())
@@ -176,6 +189,9 @@ namespace GameCore
                 {
                     shieldHitsRemaining--;
                     PowerupStateChanged?.Invoke();
+                    PowerupFeedback?.Invoke(PowerupFeedbackType.ShieldBlocked);
+                    if (!ShieldActive)
+                        PowerupFeedback?.Invoke(PowerupFeedbackType.ShieldDepleted);
                 }
                 else
                     OnGameEnded.Raise();

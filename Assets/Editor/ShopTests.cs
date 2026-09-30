@@ -182,17 +182,74 @@ public class ShopTests
             typeof(BallController).GetField("canMove", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(ball, true);
 
+            int shieldCues = 0;
+            int doubleScoreCues = 0;
+            ball.PowerupFeedback += cue =>
+            {
+                if (cue == PowerupFeedbackType.ShieldActivated) shieldCues++;
+                if (cue == PowerupFeedbackType.DoubleScoreActivated) doubleScoreCues++;
+            };
             Assert.IsTrue(ball.TryActivateShield());
             Assert.AreEqual(ShopCatalog.Find("shield").shieldHits, ball.ShieldHitsRemaining);
             Assert.AreEqual(0, ShopStateService.GetCount("shield"));
+            Assert.IsFalse(ball.TryActivateShield());
+            Assert.AreEqual(1, shieldCues);
             Assert.IsTrue(ball.TryActivateDoubleScore());
             Assert.AreEqual(ShopCatalog.Find("double_score").duration, ball.DoubleScoreRemaining);
             Assert.AreEqual(ShopCatalog.Find("double_score").scoreMultiplier, ball.ScoreMultiplier);
             Assert.AreEqual(0, ShopStateService.GetCount("double_score"));
+            Assert.IsFalse(ball.TryActivateDoubleScore());
+            Assert.AreEqual(1, doubleScoreCues);
         }
         finally
         {
             Object.DestroyImmediate(ballObject);
+            Object.DestroyImmediate(gameEnded);
+            Object.DestroyImmediate(startMoving);
+        }
+    }
+
+    [Test]
+    public void CompletedLapsEmitOnlyCoinsActuallyAdded()
+    {
+        var parent = new GameObject("ShopTestCenter");
+        var ballObject = new GameObject("ShopTestBall");
+        ballObject.SetActive(false);
+        ballObject.transform.SetParent(parent.transform);
+        NullEvent gameEnded = ScriptableObject.CreateInstance<NullEvent>();
+        NullEvent startMoving = ScriptableObject.CreateInstance<NullEvent>();
+        try
+        {
+            BallController ball = ballObject.AddComponent<BallController>();
+            Type type = typeof(BallController);
+            BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            type.GetField("OnGameEnded", flags).SetValue(ball, gameEnded);
+            type.GetField("OnStartMoving", flags).SetValue(ball, startMoving);
+            type.GetField("coinWallet", flags).SetValue(ball, wallet);
+            type.GetField("center", flags).SetValue(ball, parent.transform);
+            type.GetField("speed", flags).SetValue(ball, 0f);
+            type.GetField("maxSpeed", flags).SetValue(ball, 0f);
+            ballObject.SetActive(true);
+            type.GetField("canMove", flags).SetValue(ball, true);
+
+            int calls = 0;
+            int total = 0;
+            ball.CoinsEarned += amount => { calls++; total += amount; };
+            type.GetField("lapProgress", flags).SetValue(ball, 720f);
+            type.GetMethod("Update", flags).Invoke(ball, null);
+            Assert.AreEqual(2, wallet.Balance);
+            Assert.AreEqual(1, calls);
+            Assert.AreEqual(2, total);
+
+            PlayerPrefs.SetInt("CoinBalance", int.MaxValue);
+            type.GetField("lapProgress", flags).SetValue(ball, 360f);
+            type.GetMethod("Update", flags).Invoke(ball, null);
+            Assert.AreEqual(1, calls);
+            Assert.AreEqual(2, total);
+        }
+        finally
+        {
+            Object.DestroyImmediate(parent);
             Object.DestroyImmediate(gameEnded);
             Object.DestroyImmediate(startMoving);
         }
