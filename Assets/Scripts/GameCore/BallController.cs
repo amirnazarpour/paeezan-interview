@@ -2,6 +2,7 @@ using DG.Tweening;
 using Enums;
 using UnityEngine;
 using ScriptableObjects.GameEvents;
+using ScriptableObjects.Services;
 
 namespace GameCore
 {
@@ -11,6 +12,7 @@ namespace GameCore
         [SerializeField] private NullEvent OnGameEnded;
         [SerializeField] private NullEvent OnStartMoving;
         [SerializeField] private ParticleSystem dieParticle;
+        [SerializeField] private CoinWallet coinWallet;
 
         [SerializeField] private Transform center;
         [SerializeField] private float outsideRadius = 2f;
@@ -31,6 +33,7 @@ namespace GameCore
 
         private int _score;
         private float angle;
+        private float lapProgress;
         private float radius;
         private bool isInside;
         private bool canMove; 
@@ -42,6 +45,9 @@ namespace GameCore
 
         private void Start()
         {
+            if (!coinWallet)
+                Debug.LogError("BallController requires a CoinWallet asset assigned to its Coin Wallet field.", this);
+
             _firstSpeed = speed;
             _spriteRenderer = GetComponent<SpriteRenderer>();
             _firstColor = _spriteRenderer.color;
@@ -63,6 +69,7 @@ namespace GameCore
 
         private void StartMovement()
         {
+            lapProgress = 0f;
             canMove = true;
         }
 
@@ -74,8 +81,18 @@ namespace GameCore
             if (speed < maxSpeed)
                 speed = Mathf.Min(speed + speedIncreaseRate * Time.deltaTime, maxSpeed);
 
-            angle += speed * Time.deltaTime;
-            angle %= 360f;
+            float degreesMoved = speed * Time.deltaTime;
+            angle = (angle + degreesMoved) % 360f;
+            lapProgress += degreesMoved;
+
+            if (lapProgress >= 360f)
+            {
+                int completedLaps = Mathf.FloorToInt(lapProgress / 360f);
+                lapProgress -= completedLaps * 360f;
+
+                if (coinWallet)
+                    coinWallet.AddCoins(completedLaps);
+            }
 
             if (Input.GetMouseButtonDown(0))
             {
@@ -107,6 +124,7 @@ namespace GameCore
 
         private void Die()
         {
+            canMove = false;
             AudioManger.AudioManager.Instance.PlaySFX(SoundType.Explosion);
             speed = 0;
 
@@ -132,6 +150,7 @@ namespace GameCore
                     _spriteRenderer.color = _firstColor;
                 
                 angle = 0f;
+                lapProgress = 0f;
                 radius = outsideRadius* transform.parent.localScale.x;
                 transform.localScale = _firstLocalScale;
                 isInside = false;

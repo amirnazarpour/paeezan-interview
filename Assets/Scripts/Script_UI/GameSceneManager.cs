@@ -15,6 +15,8 @@ namespace UI
         [SerializeField] private TextMeshProUGUI playerNameText;
         [SerializeField] private TextMeshProUGUI playerScoreText;
         [SerializeField] private TextMeshProUGUI playerHighScoreText;
+        [SerializeField] private TextMeshProUGUI playerCoinsText;
+        [SerializeField] private CoinWallet coinWallet;
 
         private int playerScore;
         private int playerHighScore;
@@ -29,16 +31,30 @@ namespace UI
 
             playerHighScore = PlayerPrefsSaveService.Main.LoadInt("PlayerScore", 5000);
             playerHighScoreText.text = "HighScore : " + playerHighScore;
+
+            if (!coinWallet)
+                Debug.LogError("GameSceneManager requires a CoinWallet asset assigned to its Coin Wallet field.", this);
+
+            if (!playerCoinsText)
+                Debug.LogError("GameSceneManager requires the PlayerCoins text under Scene_Game/Canvas/GameUi.", this);
+            else if (coinWallet)
+                OnCoinsChanged(coinWallet.Balance);
         }
 
         private void OnEnable()
         {
+            if (coinWallet)
+                coinWallet.CoinsChanged += OnCoinsChanged;
+
             OnScoreChanged.OnEventRaised += OnScoreChange;
             OnGameStarted.OnEventRaised += OnGameStart;
         }
 
         private void OnDisable()
         {
+            if (coinWallet)
+                coinWallet.CoinsChanged -= OnCoinsChanged;
+
             OnScoreChanged.OnEventRaised -= OnScoreChange;
             OnGameStarted.OnEventRaised -= OnGameStart;
         }
@@ -69,6 +85,12 @@ namespace UI
                     AudioManger.AudioManager.Instance.PlaySFX(SoundType.HighScore);
                 }
             }
+        }
+
+        private void OnCoinsChanged(int balance)
+        {
+            if (playerCoinsText)
+                playerCoinsText.text = "Coins : " + balance;
         }
 
     }

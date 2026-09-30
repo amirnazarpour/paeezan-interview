@@ -15,6 +15,7 @@ namespace UI
         [Header("UI References")]
         [SerializeField] private TextMeshProUGUI scoreText;
         [SerializeField] private TextMeshProUGUI highScoreText;
+        [SerializeField] private TextMeshProUGUI coinsText;
         [SerializeField] private TextMeshProUGUI playerNameText;
 
         [Header("Game Objects")]
@@ -31,6 +32,7 @@ namespace UI
         private Vector3 pauseButtonStartPos;
         private Vector3 scoreTextStartPos;
         private Vector3 highScoreTextStartPos;
+        private Vector3 coinsTextStartPos;
         private Vector3 playerNameStartPos;
 
         private void Awake()
@@ -39,6 +41,7 @@ namespace UI
             if (ring != null) ringStartScale = ring.transform.localScale;
             if (scoreText != null) scoreTextStartPos = scoreText.transform.position;
             if (highScoreText != null) highScoreTextStartPos = highScoreText.transform.position;
+            if (coinsText != null) coinsTextStartPos = coinsText.transform.position;
             if (playerNameText != null) playerNameStartPos = playerNameText.transform.position;
         }
 
@@ -71,6 +74,7 @@ namespace UI
         {
             if (scoreText) scoreText.transform.position = scoreTextStartPos + Vector3.left * 800;
             if (highScoreText) highScoreText.transform.position = highScoreTextStartPos + Vector3.left * 800;
+            if (coinsText) coinsText.transform.position = coinsTextStartPos + Vector3.left * 800;
             if (playerNameText) playerNameText.transform.position = playerNameStartPos + Vector3.left * 800;
             if (ball) ball.transform.position = ballStartPos + Vector3.right * 10 ;
             if (ring) ring.transform.localScale = Vector3.zero;
@@ -89,6 +93,9 @@ namespace UI
             
             if (highScoreText)
                 startSeq.Join(highScoreText.transform.DOMoveX(highScoreTextStartPos.x, moveDuration).SetEase(Ease.OutBack).SetDelay(0.1f));
+
+            if (coinsText)
+                startSeq.Join(coinsText.transform.DOMoveX(coinsTextStartPos.x, moveDuration).SetEase(Ease.OutBack).SetDelay(0.1f));
             
             if (ring)
             {
@@ -118,6 +125,9 @@ namespace UI
 
             if (highScoreText)
                 endSeq.Join(highScoreText.transform.DOMoveX(highScoreTextStartPos.x - 800, moveDuration).SetEase(Ease.InBack));
+
+            if (coinsText)
+                endSeq.Join(coinsText.transform.DOMoveX(coinsTextStartPos.x - 800, moveDuration).SetEase(Ease.InBack));
 
             if (playerNameText)
                 endSeq.Join(playerNameText.transform.DOMoveX(playerNameStartPos.x - 800, moveDuration).SetEase(Ease.InBack));
