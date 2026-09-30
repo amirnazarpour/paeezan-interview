@@ -17,7 +17,8 @@ namespace UI
         [SerializeField] private TextMeshProUGUI playerHighScoreText;
         [SerializeField] private TextMeshProUGUI playerCoinsText;
         [SerializeField] private CoinWallet coinWallet;
-
+       
+        
         private int playerScore;
         private int playerHighScore;
         private bool highScoreSoundPlayed;
@@ -45,10 +46,13 @@ namespace UI
         {
             if (coinWallet)
                 coinWallet.CoinsChanged += OnCoinsChanged;
-
+     
             OnScoreChanged.OnEventRaised += OnScoreChange;
             OnGameStarted.OnEventRaised += OnGameStart;
+       
         }
+
+       
 
         private void OnDisable()
         {
@@ -57,11 +61,11 @@ namespace UI
 
             OnScoreChanged.OnEventRaised -= OnScoreChange;
             OnGameStarted.OnEventRaised -= OnGameStart;
+         
         }
 
         private void OnGameStart()
         {
-
             highScoreSoundPlayed = false;
 
             playerScore = 0;

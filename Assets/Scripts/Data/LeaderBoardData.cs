@@ -38,6 +38,7 @@ namespace Data
         {
             OnLeaderBoardPanelSelected.OnEventRaised += CheckForLoad;
             OnPanelSelected.OnEventRaised += CheckForFirstShow;
+            
         }
 
         private void CheckForFirstShow(int value)
