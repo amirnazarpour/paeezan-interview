@@ -13,7 +13,13 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
     private ShopCatalogData draft;
     private readonly HashSet<ShopSectionData> savedSections = new HashSet<ShopSectionData>();
     private readonly HashSet<ShopItemData> savedItems = new HashSet<ShopItemData>();
-    private VisualElement sectionsRoot;
+    private ShopSectionData selectedSection;
+    private ShopItemData selectedItem;
+    private ScrollView navigationScroll;
+    private ScrollView detailsScroll;
+    private VisualElement navigationRoot;
+    private VisualElement detailsRoot;
+    private Button saveButton;
     private Label status;
     private bool dirty;
 
@@ -21,7 +27,7 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
     public static void Open()
     {
         ShopCatalogEditorWindow window = GetWindow<ShopCatalogEditorWindow>("Shop Catalog");
-        window.minSize = new Vector2(600, 500);
+        window.minSize = new Vector2(720, 500);
     }
 
     public void CreateGUI()
@@ -33,28 +39,47 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
         root.style.paddingTop = 12;
         root.style.paddingBottom = 12;
 
+        VisualElement header = Row();
+        header.style.justifyContent = Justify.SpaceBetween;
         Label title = new Label("Shop Catalog");
         title.style.fontSize = 20;
         title.style.unityFontStyleAndWeight = FontStyle.Bold;
-        root.Add(title);
-        root.Add(new Label("Edit catalog data; cards are instantiated from Prefab_ShopItemCard at runtime."));
+        header.Add(title);
+        VisualElement actions = Row();
+        actions.Add(new Button(() => ReloadFromDisk(true)) { text = "Discard / Reload" });
+        saveButton = new Button(SaveAndSyncScenes) { text = "Save and Sync Scenes" };
+        actions.Add(saveButton);
+        header.Add(actions);
+        root.Add(header);
+        root.Add(new Label("Choose a section or item, edit it, then save. New themes appear in the shop after scene sync."));
 
-        VisualElement toolbar = Row();
-        toolbar.style.marginTop = 10;
-        toolbar.Add(new Button(() => ReloadFromDisk(true)) { text = "Reload JSON" });
-        toolbar.Add(new Button(SaveAndSyncScenes) { text = "Save and Sync Scenes" });
-        root.Add(toolbar);
         status = new Label();
         status.style.marginTop = 8;
         status.style.marginBottom = 8;
         root.Add(status);
 
-        ScrollView scroll = new ScrollView();
-        scroll.style.flexGrow = 1;
-        sectionsRoot = new VisualElement();
-        scroll.Add(sectionsRoot);
-        root.Add(scroll);
-        root.Add(new Button(AddSection) { text = "Add Section" });
+        VisualElement workspace = Row();
+        workspace.style.flexGrow = 1;
+        workspace.style.minHeight = 300;
+        root.Add(workspace);
+
+        navigationScroll = new ScrollView();
+        navigationScroll.style.width = 250;
+        navigationScroll.style.flexShrink = 0;
+        navigationScroll.style.backgroundColor = new Color(0.16f, 0.18f, 0.22f, 0.08f);
+        navigationScroll.style.marginRight = 12;
+        navigationScroll.style.paddingLeft = 6;
+        navigationScroll.style.paddingRight = 6;
+        navigationRoot = new VisualElement();
+        navigationScroll.Add(navigationRoot);
+        workspace.Add(navigationScroll);
+
+        detailsScroll = new ScrollView();
+        detailsScroll.style.flexGrow = 1;
+        detailsRoot = new VisualElement();
+        detailsRoot.style.paddingRight = 8;
+        detailsScroll.Add(detailsRoot);
+        workspace.Add(detailsScroll);
         ReloadFromDisk(false);
     }
 
@@ -67,12 +92,22 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
 
         if (!File.Exists(CatalogPath))
         {
+            draft = null;
+            selectedSection = null;
+            selectedItem = null;
+            RefreshViews();
             SetStatus("Missing " + CatalogPath, true);
             return;
         }
+        string selectedSectionId = selectedSection?.id;
+        string selectedItemId = selectedItem?.id;
         ShopCatalogData loaded = ShopCatalog.Parse(File.ReadAllText(CatalogPath), out string error);
         if (loaded == null)
         {
+            draft = null;
+            selectedSection = null;
+            selectedItem = null;
+            RefreshViews();
             SetStatus("Catalog is invalid: " + error, true);
             return;
         }
@@ -86,8 +121,10 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
             foreach (ShopItemData item in section.items)
                 savedItems.Add(item);
         }
-        BuildSections();
-        SetStatus("Loaded " + CatalogPath, false);
+        selectedSection = Array.Find(draft.sections, section => section.id == selectedSectionId) ??
+            draft.sections[0];
+        selectedItem = Array.Find(selectedSection.items, item => item.id == selectedItemId);
+        RefreshViews();
     }
 
     private void SaveAndSyncScenes()
@@ -121,71 +158,121 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
         }
     }
 
-    private void BuildSections()
+    private void RefreshViews()
     {
-        sectionsRoot.Clear();
+        BuildNavigation();
+        BuildDetails();
+        detailsScroll.scrollOffset = Vector2.zero;
+        UpdateValidation();
+    }
+
+    private void BuildNavigation()
+    {
+        Vector2 scrollOffset = navigationScroll.scrollOffset;
+        navigationRoot.Clear();
         if (draft == null) return;
-        for (int s = 0; s < draft.sections.Length; s++)
+
+        VisualElement heading = Row();
+        Label label = new Label("SECTIONS");
+        label.style.unityFontStyleAndWeight = FontStyle.Bold;
+        label.style.flexGrow = 1;
+        heading.Add(label);
+        navigationRoot.Add(heading);
+
+        foreach (ShopSectionData section in draft.sections)
         {
-            int sectionIndex = s;
-            ShopSectionData section = draft.sections[s];
-            VisualElement box = Box();
-            VisualElement header = Row();
-            Label name = new Label("Section " + (s + 1));
-            name.style.unityFontStyleAndWeight = FontStyle.Bold;
-            header.Add(name);
-            header.Add(ActionButton("↑", () => MoveSection(sectionIndex, -1), s > 0));
-            header.Add(ActionButton("↓", () => MoveSection(sectionIndex, 1), s < draft.sections.Length - 1));
-            header.Add(ActionButton("Remove", () => RemoveSection(sectionIndex), !ContainsRequired(section)));
-            box.Add(header);
+            Button sectionButton = NavigationButton(section.title + "  (" + section.items.Length + ")",
+                () => Select(section, null), section == selectedSection && selectedItem == null);
+            sectionButton.style.marginTop = 6;
+            navigationRoot.Add(sectionButton);
 
-            TextField id = new TextField("Section ID") { value = section.id };
-            id.SetEnabled(!savedSections.Contains(section));
-            id.RegisterValueChangedCallback(e => { section.id = e.newValue; MarkDirty(); });
-            box.Add(id);
-            TextField title = new TextField("Section title") { value = section.title };
-            title.RegisterValueChangedCallback(e => { section.title = e.newValue; MarkDirty(); });
-            box.Add(title);
+            foreach (ShopItemData item in section.items)
+            {
+                string price = item.price == 0 ? "Free" : item.price + " coins";
+                Button itemButton = NavigationButton(item.title + "  ·  " + price,
+                    () => Select(section, item), item == selectedItem);
+                itemButton.style.marginLeft = 14;
+                navigationRoot.Add(itemButton);
+            }
+        }
+        navigationScroll.scrollOffset = scrollOffset;
+    }
 
-            for (int i = 0; i < section.items.Length; i++)
-                box.Add(BuildItem(sectionIndex, i));
+    private void Select(ShopSectionData section, ShopItemData item)
+    {
+        selectedSection = section;
+        selectedItem = item;
+        BuildNavigation();
+        BuildDetails();
+        detailsScroll.scrollOffset = Vector2.zero;
+    }
 
-            VisualElement add = Row();
-            add.Add(new Button(() => AddItem(sectionIndex, ShopItemKind.BallTheme)) { text = "Add Ball Theme" });
-            add.Add(new Button(() => AddItem(sectionIndex, ShopItemKind.WorldTheme)) { text = "Add Ring Theme" });
-            box.Add(add);
-            sectionsRoot.Add(box);
+    private void BuildDetails()
+    {
+        detailsRoot.Clear();
+        if (selectedSection == null)
+        {
+            detailsRoot.Add(new Label("Choose a section to start editing."));
+            return;
+        }
+        if (selectedItem == null)
+            BuildSectionDetails();
+        else
+            BuildItemDetails();
+    }
+
+    private void BuildSectionDetails()
+    {
+        ShopSectionData section = selectedSection;
+        int index = Array.IndexOf(draft.sections, section);
+        detailsRoot.Add(Heading(section.title, "SECTION"));
+        detailsRoot.Add(new Label("Sections appear in this order in the shop."));
+
+        TextField title = new TextField("Section name") { value = section.title };
+        title.RegisterValueChangedCallback(e => { section.title = e.newValue; MarkDirty(); });
+        detailsRoot.Add(title);
+        TextField id = new TextField("Section ID") { value = section.id };
+        id.SetEnabled(!savedSections.Contains(section));
+        id.RegisterValueChangedCallback(e => { section.id = e.newValue; MarkDirty(); });
+        detailsRoot.Add(id);
+        if (savedSections.Contains(section))
+            detailsRoot.Add(Hint("Saved IDs are fixed because other data may refer to them."));
+
+        VisualElement order = Row();
+        order.style.marginTop = 14;
+        order.Add(ActionButton("Move up", () => MoveSection(index, -1), index > 0));
+        order.Add(ActionButton("Move down", () => MoveSection(index, 1), index < draft.sections.Length - 1));
+        order.Add(ActionButton("Remove section", () => RemoveSection(index), !ContainsRequired(section)));
+        detailsRoot.Add(order);
+
+        ShopItemKind addKind = ThemeKindForSection(section);
+        if (ShopCatalog.IsTheme(addKind))
+        {
+            detailsRoot.Add(Heading("Add a theme", "ITEMS"));
+            detailsRoot.Add(new Button(() => AddItem(index)) { text = AddItemLabel(addKind) });
         }
     }
 
-    private VisualElement BuildItem(int sectionIndex, int itemIndex)
+    private void BuildItemDetails()
     {
-        ShopSectionData section = draft.sections[sectionIndex];
-        ShopItemData item = section.items[itemIndex];
-        bool required = IsRequired(item.id);
-        VisualElement box = Box();
-        box.style.marginLeft = 16;
-        VisualElement header = Row();
-        header.Add(new Label(item.kind + "  •  " + item.id));
-        header.Add(ActionButton("↑", () => MoveItem(sectionIndex, itemIndex, -1), itemIndex > 0));
-        header.Add(ActionButton("↓", () => MoveItem(sectionIndex, itemIndex, 1), itemIndex < section.items.Length - 1));
-        header.Add(ActionButton("Remove", () => RemoveItem(sectionIndex, itemIndex), !required));
-        box.Add(header);
+        ShopSectionData section = selectedSection;
+        ShopItemData item = selectedItem;
+        int sectionIndex = Array.IndexOf(draft.sections, section);
+        int itemIndex = Array.IndexOf(section.items, item);
+        detailsRoot.Add(new Button(() => Select(section, null)) { text = "← " + section.title });
+        detailsRoot.Add(Heading(item.title, KindLabel(item.kind)));
 
-        TextField id = new TextField("Item ID") { value = item.id };
-        id.SetEnabled(!savedItems.Contains(item));
-        id.RegisterValueChangedCallback(e => { item.id = e.newValue; MarkDirty(); });
-        box.Add(id);
-        TextField title = new TextField("Name") { value = item.title };
+        TextField title = new TextField("Name shown in shop") { value = item.title };
         title.RegisterValueChangedCallback(e => { item.title = e.newValue; MarkDirty(); });
-        box.Add(title);
-        TextField description = new TextField("Description") { value = item.description };
+        detailsRoot.Add(title);
+        TextField description = new TextField("Description") { value = item.description, multiline = true };
         description.RegisterValueChangedCallback(e => { item.description = e.newValue; MarkDirty(); });
-        box.Add(description);
-        IntegerField price = new IntegerField("Price") { value = item.price };
-        price.SetEnabled(item.id != ShopItemIds.BallDefault && item.id != ShopItemIds.WorldDefault);
+        detailsRoot.Add(description);
+        IntegerField price = new IntegerField("Price in coins") { value = item.price };
+        bool freeDefault = item.id == ShopItemIds.BallDefault || item.id == ShopItemIds.WorldDefault;
+        price.SetEnabled(!freeDefault);
         price.RegisterValueChangedCallback(e => { item.price = e.newValue; MarkDirty(); });
-        box.Add(price);
+        detailsRoot.Add(price);
 
         if (ShopCatalog.IsTheme(item.kind))
         {
@@ -196,41 +283,68 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
                 item.color = "#" + ColorUtility.ToHtmlStringRGBA(e.newValue);
                 MarkDirty();
             });
-            box.Add(color);
+            detailsRoot.Add(color);
         }
-        if (item.kind == ShopItemKind.DoubleScore)
+        else if (item.kind == ShopItemKind.DoubleScore)
         {
             FloatField duration = new FloatField("Duration (seconds)") { value = item.duration };
             duration.RegisterValueChangedCallback(e => { item.duration = e.newValue; MarkDirty(); });
-            box.Add(duration);
+            detailsRoot.Add(duration);
             IntegerField multiplier = new IntegerField("Score multiplier") { value = item.scoreMultiplier };
             multiplier.RegisterValueChangedCallback(e => { item.scoreMultiplier = e.newValue; MarkDirty(); });
-            box.Add(multiplier);
+            detailsRoot.Add(multiplier);
         }
-        if (item.kind == ShopItemKind.Shield)
+        else if (item.kind == ShopItemKind.Shield)
         {
-            IntegerField hits = new IntegerField("Blocked hits") { value = item.shieldHits };
+            IntegerField hits = new IntegerField("Hits blocked") { value = item.shieldHits };
             hits.RegisterValueChangedCallback(e => { item.shieldHits = e.newValue; MarkDirty(); });
-            box.Add(hits);
+            detailsRoot.Add(hits);
         }
-        return box;
+
+        detailsRoot.Add(Heading("Catalog ID", "ADVANCED"));
+        TextField id = new TextField("Item ID") { value = item.id };
+        id.SetEnabled(!savedItems.Contains(item));
+        id.RegisterValueChangedCallback(e => { item.id = e.newValue; MarkDirty(); });
+        detailsRoot.Add(id);
+        detailsRoot.Add(Hint(savedItems.Contains(item) ?
+            "Saved IDs are fixed because player inventory uses them." :
+            "Set the new ID before saving. Use lowercase letters, numbers, and underscores."));
+
+        VisualElement order = Row();
+        order.style.marginTop = 14;
+        order.Add(ActionButton("Move up", () => MoveItem(sectionIndex, itemIndex, -1), itemIndex > 0));
+        order.Add(ActionButton("Move down", () => MoveItem(sectionIndex, itemIndex, 1),
+            itemIndex < section.items.Length - 1));
+        order.Add(ActionButton("Remove item", () => RemoveItem(sectionIndex, itemIndex), !IsRequired(item.id)));
+        detailsRoot.Add(order);
+
+        ShopItemKind addKind = ThemeKindForSection(section);
+        if (ShopCatalog.IsTheme(addKind))
+            detailsRoot.Add(new Button(() => AddItem(sectionIndex)) { text = AddItemLabel(addKind) });
     }
 
-    private void AddSection()
+    private static ShopItemKind ThemeKindForSection(ShopSectionData section)
     {
-        if (draft == null) return;
-        var sections = new List<ShopSectionData>(draft.sections)
+        ShopItemKind kind = ShopItemKind.Unknown;
+        foreach (ShopItemData item in section.items)
         {
-            new ShopSectionData { id = UniqueSectionId("new_section"), title = "NEW SECTION", items = Array.Empty<ShopItemData>() }
-        };
-        draft.sections = sections.ToArray();
-        MarkDirty();
-        BuildSections();
+            if (!ShopCatalog.IsTheme(item.kind)) return ShopItemKind.Unknown;
+            if (kind != ShopItemKind.Unknown && kind != item.kind) return ShopItemKind.Unknown;
+            kind = item.kind;
+        }
+        return kind;
     }
 
-    private void AddItem(int sectionIndex, ShopItemKind kind)
+    private static string AddItemLabel(ShopItemKind kind)
+    {
+        return kind == ShopItemKind.BallTheme ? "+ Add ball theme" : "+ Add ring theme";
+    }
+
+    private void AddItem(int sectionIndex)
     {
         ShopSectionData section = draft.sections[sectionIndex];
+        ShopItemKind kind = ThemeKindForSection(section);
+        if (!ShopCatalog.IsTheme(kind)) return;
         var items = new List<ShopItemData>(section.items)
         {
             new ShopItemData
@@ -241,8 +355,10 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
             }
         };
         section.items = items.ToArray();
-        MarkDirty();
-        BuildSections();
+        selectedSection = section;
+        selectedItem = section.items[section.items.Length - 1];
+        dirty = true;
+        RefreshViews();
     }
 
     private void RemoveSection(int index)
@@ -253,8 +369,10 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
         var sections = new List<ShopSectionData>(draft.sections);
         sections.RemoveAt(index);
         draft.sections = sections.ToArray();
-        MarkDirty();
-        BuildSections();
+        selectedSection = draft.sections[Mathf.Min(index, draft.sections.Length - 1)];
+        selectedItem = null;
+        dirty = true;
+        RefreshViews();
     }
 
     private void RemoveItem(int sectionIndex, int itemIndex)
@@ -266,22 +384,23 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
         var items = new List<ShopItemData>(section.items);
         items.RemoveAt(itemIndex);
         section.items = items.ToArray();
-        MarkDirty();
-        BuildSections();
+        selectedItem = null;
+        dirty = true;
+        RefreshViews();
     }
 
     private void MoveSection(int index, int direction)
     {
         Swap(draft.sections, index, index + direction);
-        MarkDirty();
-        BuildSections();
+        dirty = true;
+        RefreshViews();
     }
 
     private void MoveItem(int sectionIndex, int index, int direction)
     {
         Swap(draft.sections[sectionIndex].items, index, index + direction);
-        MarkDirty();
-        BuildSections();
+        dirty = true;
+        RefreshViews();
     }
 
     private static void Swap<T>(T[] values, int a, int b)
@@ -289,15 +408,6 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
         T temp = values[a];
         values[a] = values[b];
         values[b] = temp;
-    }
-
-    private string UniqueSectionId(string seed)
-    {
-        string candidate = seed;
-        int number = 2;
-        while (Array.Exists(draft.sections, section => section.id == candidate))
-            candidate = seed + "_" + number++;
-        return candidate;
     }
 
     private string UniqueItemId(string seed)
@@ -329,16 +439,50 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
         return row;
     }
 
-    private static VisualElement Box()
+    private static Button NavigationButton(string caption, Action action, bool selected)
     {
-        var box = new VisualElement();
-        box.style.paddingLeft = 8;
-        box.style.paddingRight = 8;
-        box.style.paddingTop = 8;
-        box.style.paddingBottom = 8;
-        box.style.marginBottom = 10;
-        box.style.backgroundColor = new Color(0.2f, 0.23f, 0.27f, 0.15f);
-        return box;
+        var button = new Button(action) { text = caption };
+        button.style.height = 30;
+        button.style.unityTextAlign = TextAnchor.MiddleLeft;
+        if (selected)
+            button.style.backgroundColor = new Color(0.35f, 0.63f, 0.78f, 0.45f);
+        return button;
+    }
+
+    private static VisualElement Heading(string title, string category)
+    {
+        var heading = new VisualElement();
+        heading.style.marginTop = 12;
+        heading.style.marginBottom = 12;
+        Label eyebrow = new Label(category);
+        eyebrow.style.fontSize = 10;
+        eyebrow.style.unityFontStyleAndWeight = FontStyle.Bold;
+        heading.Add(eyebrow);
+        Label name = new Label(title);
+        name.style.fontSize = 19;
+        name.style.unityFontStyleAndWeight = FontStyle.Bold;
+        heading.Add(name);
+        return heading;
+    }
+
+    private static Label Hint(string message)
+    {
+        var hint = new Label(message);
+        hint.style.color = new Color(0.42f, 0.45f, 0.49f);
+        hint.style.marginBottom = 8;
+        return hint;
+    }
+
+    private static string KindLabel(ShopItemKind kind)
+    {
+        switch (kind)
+        {
+            case ShopItemKind.Shield: return "SHIELD POWERUP";
+            case ShopItemKind.DoubleScore: return "SCORE POWERUP";
+            case ShopItemKind.BallTheme: return "BALL THEME";
+            case ShopItemKind.WorldTheme: return "RING THEME";
+            default: return "ITEM";
+        }
     }
 
     private static Button ActionButton(string caption, Action action, bool enabled)
@@ -351,7 +495,21 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
     private void MarkDirty()
     {
         dirty = true;
-        SetStatus("Unsaved catalog edits", false);
+        BuildNavigation();
+        UpdateValidation();
+    }
+
+    private void UpdateValidation()
+    {
+        if (draft == null)
+        {
+            saveButton.SetEnabled(false);
+            return;
+        }
+        bool valid = ShopCatalog.Parse(JsonUtility.ToJson(draft), out string error) != null;
+        saveButton.SetEnabled(valid);
+        SetStatus(valid ? (dirty ? "Unsaved changes. Save and Sync Scenes when ready." :
+            "Catalog loaded. Select a section or item to edit.") : "Fix before saving: " + error, !valid);
     }
 
     private void SetStatus(string message, bool error)
