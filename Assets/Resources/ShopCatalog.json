@@ -11,17 +11,19 @@
                     "kind": 1,
                     "price": 2,
                     "color": "",
+                    "previewSpritePath": "ShopPreviews/005888ede18a58e4db8d069cfa3007cb",
                     "duration": 0.0,
                     "shieldHits": 1,
                     "scoreMultiplier": 0
                 },
                 {
                     "id": "double_score",
-                    "title": "Double Score",
+                    "title": "Double Score ",
                     "description": "Double star score for 10 seconds",
                     "kind": 2,
                     "price": 2,
                     "color": "",
+                    "previewSpritePath": "ShopPreviews/005888ede18a58e4db8d069cfa3007cb",
                     "duration": 10.0,
                     "shieldHits": 0,
                     "scoreMultiplier": 2
@@ -39,6 +41,7 @@
                     "kind": 3,
                     "price": 0,
                     "color": "#397FA0",
+                    "previewSpritePath": "",
                     "duration": 0.0,
                     "shieldHits": 0,
                     "scoreMultiplier": 0
@@ -48,8 +51,9 @@
                     "title": "Coral",
                     "description": "Warm coral",
                     "kind": 3,
-                    "price": 15,
+                    "price": 2,
                     "color": "#F47A78",
+                    "previewSpritePath": "",
                     "duration": 0.0,
                     "shieldHits": 0,
                     "scoreMultiplier": 0
@@ -59,8 +63,9 @@
                     "title": "Gold",
                     "description": "Bright gold",
                     "kind": 3,
-                    "price": 25,
+                    "price": 3,
                     "color": "#F5C542",
+                    "previewSpritePath": "",
                     "duration": 0.0,
                     "shieldHits": 0,
                     "scoreMultiplier": 0
@@ -70,8 +75,9 @@
                     "title": "Violet",
                     "description": "Soft violet",
                     "kind": 3,
-                    "price": 35,
+                    "price": 10,
                     "color": "#9B7BFF",
+                    "previewSpritePath": "",
                     "duration": 0.0,
                     "shieldHits": 0,
                     "scoreMultiplier": 0
@@ -89,6 +95,7 @@
                     "kind": 4,
                     "price": 0,
                     "color": "#000000",
+                    "previewSpritePath": "",
                     "duration": 0.0,
                     "shieldHits": 0,
                     "scoreMultiplier": 0
@@ -98,8 +105,9 @@
                     "title": "Navy",
                     "description": "Deep blue ring",
                     "kind": 4,
-                    "price": 15,
+                    "price": 2,
                     "color": "#27476E",
+                    "previewSpritePath": "",
                     "duration": 0.0,
                     "shieldHits": 0,
                     "scoreMultiplier": 0
@@ -109,8 +117,9 @@
                     "title": "Forest",
                     "description": "Green ring",
                     "kind": 4,
-                    "price": 25,
+                    "price": 3,
                     "color": "#267A65",
+                    "previewSpritePath": "",
                     "duration": 0.0,
                     "shieldHits": 0,
                     "scoreMultiplier": 0
@@ -120,8 +129,9 @@
                     "title": "Plum",
                     "description": "Purple ring",
                     "kind": 4,
-                    "price": 35,
+                    "price": 10,
                     "color": "#754487",
+                    "previewSpritePath": "",
                     "duration": 0.0,
                     "shieldHits": 0,
                     "scoreMultiplier": 0

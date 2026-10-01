@@ -24,24 +24,6 @@ public static class ShopSceneSync
     private static readonly Color Card = Hex("#FFFFFF");
     private static readonly Color Teal = Hex("#397F9F");
 
-    [MenuItem("Tools/Shop/Sync Scene UI")]
-    public static void SyncSceneUi()
-    {
-        if (!PrepareSceneSync()) return;
-        SyncSceneUiAfterPreparation();
-    }
-
-    [MenuItem("Tools/Shop/Sync Game HUD")]
-    public static void SyncGameHudOnly()
-    {
-        if (EditorApplication.isPlayingOrWillChangePlaymode)
-        {
-            Debug.LogError("Stop Play mode before syncing the game HUD.");
-            return;
-        }
-        SyncGame();
-    }
-
     public static bool PrepareSceneSync()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

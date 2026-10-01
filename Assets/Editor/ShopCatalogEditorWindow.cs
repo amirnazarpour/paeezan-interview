@@ -13,6 +13,7 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
     private ShopCatalogData draft;
     private readonly HashSet<ShopSectionData> savedSections = new HashSet<ShopSectionData>();
     private readonly HashSet<ShopItemData> savedItems = new HashSet<ShopItemData>();
+    private readonly Dictionary<ShopItemData, Sprite> pendingPreviews = new Dictionary<ShopItemData, Sprite>();
     private ShopSectionData selectedSection;
     private ShopItemData selectedItem;
     private ScrollView navigationScroll;
@@ -113,6 +114,7 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
         }
         draft = loaded;
         dirty = false;
+        pendingPreviews.Clear();
         savedSections.Clear();
         savedItems.Clear();
         foreach (ShopSectionData section in draft.sections)
@@ -136,6 +138,11 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
             SetStatus("Fix catalog before saving: " + error, true);
             return;
         }
+        if (!ValidatePreviewImages(out error))
+        {
+            SetStatus("Fix preview images before saving: " + error, true);
+            return;
+        }
         if (!ShopSceneSync.PrepareSceneSync())
         {
             SetStatus("Save and sync cancelled; catalog JSON was not changed.", true);
@@ -144,6 +151,7 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
 
         try
         {
+            SavePendingPreviews();
             File.WriteAllText(CatalogPath, json + Environment.NewLine);
             AssetDatabase.ImportAsset(CatalogPath, ImportAssetOptions.ForceUpdate);
             ShopCatalog.Reload();
@@ -153,7 +161,7 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
         }
         catch (Exception ex)
         {
-            SetStatus("Sync failed: " + ex.Message + " Check the saved JSON and run Tools > Shop > Sync Scene UI.", true);
+            SetStatus("Sync failed: " + ex.Message + " Fix the issue and click Save and Sync Scenes again.", true);
             Debug.LogException(ex);
         }
     }
@@ -273,6 +281,20 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
         price.SetEnabled(!freeDefault);
         price.RegisterValueChangedCallback(e => { item.price = e.newValue; MarkDirty(); });
         detailsRoot.Add(price);
+
+        if (ShopCatalog.IsPowerup(item.kind))
+        {
+            var preview = new ObjectField("Preview image")
+            {
+                objectType = typeof(Sprite),
+                allowSceneObjects = false,
+                value = pendingPreviews.TryGetValue(item, out Sprite pending)
+                    ? pending : LoadPreview(item.previewSpritePath)
+            };
+            preview.RegisterValueChangedCallback(e => SetPreviewImage(item, preview, e.newValue as Sprite));
+            detailsRoot.Add(preview);
+            detailsRoot.Add(Hint("Choose a single Sprite. Save will copy it into Resources for builds."));
+        }
 
         if (ShopCatalog.IsTheme(item.kind))
         {
@@ -485,6 +507,108 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
         }
     }
 
+    private static Sprite LoadPreview(string path)
+    {
+        return string.IsNullOrEmpty(path) ? null : Resources.Load<Sprite>(path);
+    }
+
+    private void SetPreviewImage(ShopItemData item, ObjectField field, Sprite sprite)
+    {
+        if (sprite == null)
+        {
+            pendingPreviews.Remove(item);
+            item.previewSpritePath = string.Empty;
+            MarkDirty();
+            return;
+        }
+
+        if (!TryGetPreviewPath(sprite, out string path, out string error))
+        {
+            field.SetValueWithoutNotify(pendingPreviews.TryGetValue(item, out Sprite pending)
+                ? pending : LoadPreview(item.previewSpritePath));
+            SetStatus(error, true);
+            return;
+        }
+
+        string sourcePath = AssetDatabase.GetAssetPath(sprite);
+        if (sourcePath.IndexOf("/Resources/", StringComparison.OrdinalIgnoreCase) >= 0)
+            pendingPreviews.Remove(item);
+        else
+            pendingPreviews[item] = sprite;
+        item.previewSpritePath = path;
+        MarkDirty();
+    }
+
+    private static bool TryGetPreviewPath(Sprite sprite, out string path, out string error)
+    {
+        path = null;
+        error = null;
+        string assetPath = AssetDatabase.GetAssetPath(sprite);
+        if (string.IsNullOrEmpty(assetPath) || !assetPath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) ||
+            AssetDatabase.LoadAssetAtPath<Sprite>(assetPath) != sprite)
+        {
+            error = "Choose a single Sprite asset from this project (sprite sheet slices are not supported).";
+            return false;
+        }
+
+        int resourcesIndex = assetPath.LastIndexOf("/Resources/", StringComparison.OrdinalIgnoreCase);
+        if (resourcesIndex >= 0)
+        {
+            string relative = assetPath.Substring(resourcesIndex + "/Resources/".Length);
+            path = relative.Substring(0, relative.Length - Path.GetExtension(relative).Length);
+        }
+        else
+        {
+            string guid = AssetDatabase.AssetPathToGUID(assetPath);
+            if (string.IsNullOrEmpty(guid))
+            {
+                error = "The selected Sprite has no asset GUID.";
+                return false;
+            }
+            path = "ShopPreviews/" + guid;
+        }
+        return true;
+    }
+
+    private bool ValidatePreviewImages(out string error)
+    {
+        foreach (ShopSectionData section in draft.sections)
+        foreach (ShopItemData item in section.items)
+        {
+            if (!ShopCatalog.IsPowerup(item.kind) || string.IsNullOrEmpty(item.previewSpritePath)) continue;
+            if (pendingPreviews.TryGetValue(item, out Sprite sprite))
+            {
+                if (sprite != null && TryGetPreviewPath(sprite, out string path, out _) &&
+                    path == item.previewSpritePath) continue;
+            }
+            else if (LoadPreview(item.previewSpritePath) != null) continue;
+            error = "Cannot load the preview image for " + item.title + ".";
+            return false;
+        }
+        error = null;
+        return true;
+    }
+
+    private void SavePendingPreviews()
+    {
+        if (pendingPreviews.Count == 0) return;
+        const string previewFolder = "Assets/Resources/ShopPreviews";
+        if (!AssetDatabase.IsValidFolder(previewFolder))
+            AssetDatabase.CreateFolder("Assets/Resources", "ShopPreviews");
+
+        foreach (KeyValuePair<ShopItemData, Sprite> entry in pendingPreviews)
+        {
+            string source = AssetDatabase.GetAssetPath(entry.Value);
+            string target = previewFolder + "/" + Path.GetFileName(entry.Key.previewSpritePath) +
+                Path.GetExtension(source);
+            if (AssetDatabase.LoadMainAssetAtPath(target) == null && !AssetDatabase.CopyAsset(source, target))
+                throw new IOException("Could not copy preview Sprite from " + source + " to " + target);
+            AssetDatabase.ImportAsset(target, ImportAssetOptions.ForceUpdate);
+            if (LoadPreview(entry.Key.previewSpritePath) == null)
+                throw new IOException("Copied preview Sprite could not be loaded: " + target);
+        }
+    }
+
     private static Button ActionButton(string caption, Action action, bool enabled)
     {
         var button = new Button(action) { text = caption };
@@ -507,6 +631,7 @@ public sealed class ShopCatalogEditorWindow : EditorWindow
             return;
         }
         bool valid = ShopCatalog.Parse(JsonUtility.ToJson(draft), out string error) != null;
+        if (valid) valid = ValidatePreviewImages(out error);
         saveButton.SetEnabled(valid);
         SetStatus(valid ? (dirty ? "Unsaved changes. Save and Sync Scenes when ready." :
             "Catalog loaded. Select a section or item to edit.") : "Fix before saving: " + error, !valid);

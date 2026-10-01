@@ -673,7 +673,8 @@ MonoBehaviour:
   playerScoreText: {fileID: 1055529421}
   playerHighScoreText: {fileID: 1181779007}
   playerCoinsText: {fileID: 600536941}
-  coinWallet: {fileID: 11400000, guid: abb1ff4887483954897f18e1e0855058, type: 2}
+  resultCoinsText: {fileID: 2636724675807617648}
+  ball: {fileID: 2997321113628151028}
 --- !u!114 &1181779007 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4559207237458131352, guid: 7def8176acab13a44a6e0cb4be90725b, type: 3}
@@ -848,6 +849,7 @@ MonoBehaviour:
   playerNameText: {fileID: 1047216695}
   scoreText: {fileID: 1883447763}
   highScoreText: {fileID: 1264824771}
+  coinsText: {fileID: 2636724675807617648}
   resetButton: {fileID: 519674354}
   homeButton: {fileID: 1843069627}
   shareButton: {fileID: 563447195}
@@ -1241,6 +1243,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 97e87851f85118e49abf4bfdafd5166a, type: 3}
+--- !u!114 &2636724675807617648 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3926518602131103712, guid: 97e87851f85118e49abf4bfdafd5166a, type: 3}
+  m_PrefabInstance: {fileID: 2636724675807617647}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &2997321113628151026
 PrefabInstance:
   m_ObjectHideFlags: 0

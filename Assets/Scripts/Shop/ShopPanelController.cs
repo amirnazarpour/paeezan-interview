@@ -118,7 +118,7 @@ namespace Shop
         private void ReportOutOfSync()
         {
             if (reportedOutOfSync) return;
-            Debug.LogError("Shop scene sections do not match ShopCatalog.json. Run Tools > Shop > Sync Scene UI and save Scene_Menu.", this);
+            Debug.LogError("Shop scene sections do not match ShopCatalog.json. Open Tools > Shop > Catalog Editor and click Save and Sync Scenes.", this);
             reportedOutOfSync = true;
         }
     }

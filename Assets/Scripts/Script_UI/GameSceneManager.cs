@@ -1,4 +1,5 @@
 using Enums;
+using GameCore;
 using ScriptableObjects.GameEvents;
 using ScriptableObjects.Services;
 using TMPro;
@@ -16,11 +17,13 @@ namespace UI
         [SerializeField] private TextMeshProUGUI playerScoreText;
         [SerializeField] private TextMeshProUGUI playerHighScoreText;
         [SerializeField] private TextMeshProUGUI playerCoinsText;
-        [SerializeField] private CoinWallet coinWallet;
+        [SerializeField] private TextMeshProUGUI resultCoinsText;
+        [SerializeField] private BallController ball;
        
         
         private int playerScore;
         private int playerHighScore;
+        private int runCoins;
         private bool highScoreSoundPlayed;
 
         private void Start()
@@ -33,19 +36,17 @@ namespace UI
             playerHighScore = PlayerPrefsSaveService.Main.LoadInt("PlayerScore", 5000);
             playerHighScoreText.text = "HighScore : " + playerHighScore;
 
-            if (!coinWallet)
-                Debug.LogError("GameSceneManager requires a CoinWallet asset assigned to its Coin Wallet field.", this);
+            if (!ball || !playerCoinsText || !resultCoinsText)
+                Debug.LogError("GameSceneManager requires the scene BallController, GameUi/PlayerCoins text, and GameOverUI/PlayerCoins result text assigned in Scene_Game.", this);
 
-            if (!playerCoinsText)
-                Debug.LogError("GameSceneManager requires the PlayerCoins text under Scene_Game/Canvas/GameUi.", this);
-            else if (coinWallet)
-                OnCoinsChanged(coinWallet.Balance);
+            runCoins = 0;
+            RefreshCoins();
         }
 
         private void OnEnable()
         {
-            if (coinWallet)
-                coinWallet.CoinsChanged += OnCoinsChanged;
+            if (ball)
+                ball.CoinsEarned += OnCoinsEarned;
      
             OnScoreChanged.OnEventRaised += OnScoreChange;
             OnGameStarted.OnEventRaised += OnGameStart;
@@ -56,8 +57,8 @@ namespace UI
 
         private void OnDisable()
         {
-            if (coinWallet)
-                coinWallet.CoinsChanged -= OnCoinsChanged;
+            if (ball)
+                ball.CoinsEarned -= OnCoinsEarned;
 
             OnScoreChanged.OnEventRaised -= OnScoreChange;
             OnGameStarted.OnEventRaised -= OnGameStart;
@@ -70,6 +71,8 @@ namespace UI
 
             playerScore = 0;
             playerScoreText.text = "Score : 0";
+            runCoins = 0;
+            RefreshCoins();
         }
 
         private void OnScoreChange(int score)
@@ -91,10 +94,21 @@ namespace UI
             }
         }
 
-        private void OnCoinsChanged(int balance)
+        private void OnCoinsEarned(int amount)
+        {
+            if (amount <= 0)
+                return;
+
+            runCoins += amount;
+            RefreshCoins();
+        }
+
+        private void RefreshCoins()
         {
             if (playerCoinsText)
-                playerCoinsText.text = "Coins : " + balance;
+                playerCoinsText.text = "Coins : " + runCoins;
+            if (resultCoinsText)
+                resultCoinsText.text = "Coins : " + runCoins;
         }
 
     }

@@ -24,10 +24,12 @@ namespace Shop
         [SerializeField] private Button actionButton;
 
         private ShopPanelController panel;
+        private Sprite defaultPreviewSprite;
         public string ItemId => itemId;
 
         private void Awake()
         {
+            defaultPreviewSprite = previewImage.sprite;
             actionButton.onClick.AddListener(OnAction);
         }
 
@@ -53,7 +55,13 @@ namespace Shop
             descriptionText.text = item.description;
             priceText.text = state == CardState.Unlocked || state == CardState.Equipped ?
                 "OWNED" : item.price + " COINS";
-            if (theme && ColorUtility.TryParseHtmlString(item.color, out Color color))
+            Sprite powerupPreview = !theme && !string.IsNullOrEmpty(item.previewSpritePath)
+                ? Resources.Load<Sprite>(item.previewSpritePath) : null;
+            previewImage.sprite = powerupPreview != null ? powerupPreview : defaultPreviewSprite;
+            previewImage.preserveAspect = powerupPreview != null;
+            if (powerupPreview != null)
+                previewImage.color = Color.white;
+            else if (theme && ColorUtility.TryParseHtmlString(item.color, out Color color))
                 previewImage.color = color;
             else
                 previewImage.color = item.kind == ShopItemKind.Shield ? new Color(0.31f, 0.78f, 0.88f) :

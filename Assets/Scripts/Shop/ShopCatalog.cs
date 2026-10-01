@@ -44,6 +44,7 @@ namespace Shop
         public ShopItemKind kind;
         public int price;
         public string color;
+        public string previewSpritePath;
         public float duration;
         public int shieldHits;
         public int scoreMultiplier;

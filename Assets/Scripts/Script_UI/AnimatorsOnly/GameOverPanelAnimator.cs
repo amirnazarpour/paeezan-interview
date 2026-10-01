@@ -18,6 +18,7 @@ namespace UI
         [SerializeField] private TextMeshProUGUI playerNameText;
         [SerializeField] private TextMeshProUGUI scoreText;
         [SerializeField] private TextMeshProUGUI highScoreText;
+        [SerializeField] private TextMeshProUGUI coinsText;
 
         [SerializeField] private GameObject resetButton;
         [SerializeField] private GameObject homeButton;
@@ -30,6 +31,7 @@ namespace UI
         private Vector3 playerNameStartPos;
         private Vector3 scoreStartPos;
         private Vector3 highScoreStartPos;
+        private Vector3 coinsStartPos;
 
         private Vector3 resetButtonStartPos;
         private Vector3 homeButtonStartPos;
@@ -40,6 +42,7 @@ namespace UI
             if (playerNameText) playerNameStartPos = playerNameText.transform.position;
             if (scoreText) scoreStartPos = scoreText.transform.position;
             if (highScoreText) highScoreStartPos = highScoreText.transform.position;
+            if (coinsText) coinsStartPos = coinsText.transform.position;
 
             if (resetButton) resetButtonStartPos = resetButton.transform.position;
             if (homeButton) homeButtonStartPos = homeButton.transform.position;
@@ -79,6 +82,7 @@ namespace UI
             if (playerNameText) playerNameText.transform.position = playerNameStartPos + Vector3.up * 1500;
             if (scoreText) scoreText.transform.position = scoreStartPos + Vector3.up * 1500;
             if (highScoreText) highScoreText.transform.position = highScoreStartPos + Vector3.up * 1500;
+            if (coinsText) coinsText.transform.position = coinsStartPos + Vector3.up * 1500;
 
             if (resetButton) resetButton.transform.position = resetButtonStartPos + Vector3.down * 1500;
             if (homeButton) homeButton.transform.position = homeButtonStartPos + Vector3.right * 1500;
@@ -93,6 +97,8 @@ namespace UI
                 seq.Join(scoreText.transform.DOMoveY(scoreStartPos.y, moveDuration).SetDelay(staggerDelay));
             if (highScoreText)
                 seq.Join(highScoreText.transform.DOMoveY(highScoreStartPos.y, moveDuration).SetDelay(staggerDelay * 2));
+            if (coinsText)
+                seq.Join(coinsText.transform.DOMoveY(coinsStartPos.y, moveDuration).SetDelay(staggerDelay * 3));
 
   
             if (resetButton)
@@ -117,6 +123,8 @@ namespace UI
                 seq.Join(scoreText.transform.DOMoveY(scoreStartPos.y + 1500, moveDuration).SetEase(Ease.InCubic));
             if (highScoreText)
                 seq.Join(highScoreText.transform.DOMoveY(highScoreStartPos.y + 1500, moveDuration).SetEase(Ease.InCubic));
+            if (coinsText)
+                seq.Join(coinsText.transform.DOMoveY(coinsStartPos.y + 1500, moveDuration).SetEase(Ease.InCubic));
             if (resetButton)
                 seq.Join(resetButton.transform.DOMoveY(resetButtonStartPos.y - 1500, moveDuration).SetEase(Ease.InCubic));
             if (homeButton)
