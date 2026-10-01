@@ -1,0 +1,17 @@
+Paeezan interview project - AI chat history
+Tool: OpenAI Codex
+
+The full visible user/assistant message exports are stored beside this file.
+The shared links provide another way to review each conversation.
+
+1. Repository setup, contributor guidelines, and coin wallet
+   Shared chat: https://chatgpt.com/s/cx_6abe260ce4cc81919bab947c630a42b0
+
+2. Shop, uGUI, catalog editor, and submission documentation
+   Shared chat: https://chatgpt.com/s/cx_6abe26648c94819197fbe83ebec14c8d
+
+3. Shop effects in gameplay and visual feedback
+   Shared chat: https://chatgpt.com/s/cx_6abe2694dc208191bc9d2ba5c0a4a9de
+
+4. Coins earned in the current run and result screen
+   Shared chat: https://chatgpt.com/s/cx_6abe26bee6848191ab693f430aeac7fb
